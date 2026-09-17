@@ -820,6 +820,16 @@ pub(crate) mod ids {
         name: to_s               content: b"to_s"
         name: eq                 content: b"=="
         name: include_p          content: b"include?"
+        name: io_buffer_u8       content: b"U8"
+        name: io_buffer_s8       content: b"S8"
+        name: io_buffer_u16_be   content: b"U16"
+        name: io_buffer_u16_le   content: b"u16"
+        name: io_buffer_s16_be   content: b"S16"
+        name: io_buffer_s16_le   content: b"s16"
+        name: io_buffer_u32_be   content: b"U32"
+        name: io_buffer_u32_le   content: b"u32"
+        name: io_buffer_s32_be   content: b"S32"
+        name: io_buffer_s32_le   content: b"s32"
     }
 }
 

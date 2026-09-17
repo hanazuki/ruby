@@ -2790,6 +2790,48 @@ IO_BUFFER_DECLARE_TYPE(f64, double, RB_IO_BUFFER_LITTLE_ENDIAN, DBL2NUM, NUM2DBL
 IO_BUFFER_DECLARE_TYPE(F64, double, RB_IO_BUFFER_BIG_ENDIAN, DBL2NUM, NUM2DBL, ruby_swapf64)
 #undef IO_BUFFER_DECLARE_TYPE
 
+#if USE_YJIT
+// Read the value at offset.
+// Return Qundef if the buffer is invalid or offset is out of bounds.
+//
+// Contracts:
+// - The caller ensures buffer is an instance of IO::Buffer
+// - Given that precondition, the function should never raise.
+#define IO_BUFFER_TRY_READ(name, unsigned_type, type, endian, swap, wrap) \
+    VALUE \
+    rb_io_buffer_try_read_##name(VALUE buffer, size_t offset) \
+    { \
+        void *base; \
+        size_t size; \
+        unsigned_type unsigned_value; \
+        type value; \
+        STATIC_ASSERT(io_buffer_get_types_same_size, sizeof(unsigned_type) == sizeof(type)); \
+        rb_io_buffer_get_bytes(buffer, &base, &size); \
+        if (base == NULL || offset > size || sizeof(unsigned_type) > size - offset) { \
+            return Qundef; \
+        } \
+        memcpy(&unsigned_value, (char *)base + offset, sizeof(unsigned_value)); \
+        if ((endian) != RB_IO_BUFFER_HOST_ENDIAN) { \
+            unsigned_value = swap(unsigned_value); \
+        } \
+        memcpy(&value, &unsigned_value, sizeof(value)); \
+        return wrap(value); \
+    }
+
+IO_BUFFER_TRY_READ(U8, uint8_t, uint8_t, RB_IO_BUFFER_HOST_ENDIAN, ruby_swap8, UINT2NUM)
+IO_BUFFER_TRY_READ(S8, uint8_t, int8_t, RB_IO_BUFFER_HOST_ENDIAN, ruby_swap8, INT2NUM)
+IO_BUFFER_TRY_READ(U16, uint16_t, uint16_t, RB_IO_BUFFER_BIG_ENDIAN, ruby_swap16, UINT2NUM)
+IO_BUFFER_TRY_READ(u16, uint16_t, uint16_t, RB_IO_BUFFER_LITTLE_ENDIAN, ruby_swap16, UINT2NUM)
+IO_BUFFER_TRY_READ(S16, uint16_t, int16_t, RB_IO_BUFFER_BIG_ENDIAN, ruby_swap16, INT2NUM)
+IO_BUFFER_TRY_READ(s16, uint16_t, int16_t, RB_IO_BUFFER_LITTLE_ENDIAN, ruby_swap16, INT2NUM)
+IO_BUFFER_TRY_READ(U32, uint32_t, uint32_t, RB_IO_BUFFER_BIG_ENDIAN, ruby_swap32, UINT2NUM)
+IO_BUFFER_TRY_READ(u32, uint32_t, uint32_t, RB_IO_BUFFER_LITTLE_ENDIAN, ruby_swap32, UINT2NUM)
+IO_BUFFER_TRY_READ(S32, uint32_t, int32_t, RB_IO_BUFFER_BIG_ENDIAN, ruby_swap32, INT2NUM)
+IO_BUFFER_TRY_READ(s32, uint32_t, int32_t, RB_IO_BUFFER_LITTLE_ENDIAN, ruby_swap32, INT2NUM)
+
+#undef IO_BUFFER_TRY_READ
+#endif
+
 static inline size_t
 io_buffer_buffer_type_size(ID buffer_type)
 {

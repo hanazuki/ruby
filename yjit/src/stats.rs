@@ -541,6 +541,11 @@ make_counters! {
     getbyte_idx_negative,
     getbyte_idx_out_of_bounds,
 
+    io_buffer_get_value_type_mismatch,
+    io_buffer_get_value_offset_not_fixnum,
+    io_buffer_get_value_negative_offset,
+    io_buffer_get_value_invalid_access,
+
     splatkw_not_hash,
     splatkw_not_nil,
 

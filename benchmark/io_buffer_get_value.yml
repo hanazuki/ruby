@@ -1,0 +1,88 @@
+prelude: |
+  # frozen_string_literal: true
+  Warning[:experimental] = false
+  buffer = IO::Buffer.for("\x01\x23\x45\x67\x89\xab\xcd\xef\xfe\xdc\xba\x98\x76\x54\x32\x10")
+benchmark:
+  - name: buffer.get_value.U32
+    script: |
+      buffer.get_value(:U32, 0)
+  - name: buffer.get_value.u32
+    script: |
+      buffer.get_value(:u32, 0)
+  - name: buffer.get_value.U16
+    script: |
+      buffer.get_value(:U16, 0)
+  - name: buffer.get_value.u16
+    script: |
+      buffer.get_value(:u16, 0)
+  - name: buffer.get_value.U8
+    script: |
+      buffer.get_value(:U8, 0)
+  - name: buffer.get_value.U64 Fixnum
+    script: |
+      buffer.get_value(:U64, 0)
+  - name: buffer.get_value.U64 Bignum
+    script: |
+      buffer.get_value(:U64, 8)
+  - name: buffer.get_value.u64 Fixnum
+    script: |
+      buffer.get_value(:u64, 8)
+  - name: buffer.get_value.u64 Bignum
+    script: |
+      buffer.get_value(:u64, 0)
+  - name: buffer.get_value.F32
+    script: |
+      buffer.get_value(:F32, 0)
+  - name: buffer.get_value.F64
+    script: |
+      buffer.get_value(:F64, 0)
+
+  # Compare monomorphic and polymorphic callsites to measure JIT penalty
+  - name: buffer.get_value.mono
+    prelude: |
+      def poly(buffer, type) = buffer.get_value(type, 0)
+    script: |
+      poly(buffer, :U32)
+      poly(buffer, :U32)
+      poly(buffer, :U32)
+      poly(buffer, :U32)
+      poly(buffer, :U32)
+      poly(buffer, :U32)
+      poly(buffer, :U32)
+      poly(buffer, :U32)
+  - name: buffer.get_value.poly2
+    prelude: |
+      def poly(buffer, type) = buffer.get_value(type, 0)
+    script: |
+      poly(buffer, :U32)
+      poly(buffer, :u32)
+      poly(buffer, :U32)
+      poly(buffer, :u32)
+      poly(buffer, :U32)
+      poly(buffer, :u32)
+      poly(buffer, :U32)
+      poly(buffer, :u32)
+  - name: buffer.get_value.poly4
+    prelude: |
+      def poly(buffer, type) = buffer.get_value(type, 0)
+    script: |
+      poly(buffer, :U32)
+      poly(buffer, :u32)
+      poly(buffer, :S32)
+      poly(buffer, :s32)
+      poly(buffer, :U32)
+      poly(buffer, :u32)
+      poly(buffer, :S32)
+      poly(buffer, :s32)
+  - name: buffer.get_value.poly8
+    prelude: |
+      def poly(buffer, type) = buffer.get_value(type, 0)
+    script: |
+      poly(buffer, :U32)
+      poly(buffer, :u32)
+      poly(buffer, :S32)
+      poly(buffer, :s32)
+      poly(buffer, :U16)
+      poly(buffer, :u16)
+      poly(buffer, :S16)
+      poly(buffer, :s16)

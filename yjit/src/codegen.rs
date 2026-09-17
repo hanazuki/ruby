@@ -6173,6 +6173,101 @@ fn jit_rb_str_getbyte(
     true
 }
 
+fn jit_rb_io_buffer_get_value(
+    jit: &mut JITState,
+    asm: &mut Assembler,
+    _ci: *const rb_callinfo,
+    _cme: *const rb_callable_method_entry_t,
+    _block: Option<BlockHandler>,
+    argc: i32,
+    _known_recv_class: Option<VALUE>,
+) -> bool {
+    if argc != 2 {
+        return false;
+    }
+
+    // Reserve the last chain entry for the generic CFUNC fallback so that a
+    // polymorphic type argument doesn't make the callsite megamorphic.
+    if asm.ctx.get_chain_depth() >= SEND_MAX_DEPTH - 1 {
+        return false;
+    }
+
+    let comptime_type = jit.peek_at_stack(&asm.ctx, 1);
+    if !comptime_type.static_sym_p() {
+        return false;
+    }
+    let type_id = unsafe { rb_sym2id(comptime_type) };
+
+    type TryReadFn = unsafe extern "C" fn(VALUE, usize) -> VALUE;
+    let (try_read_fn, type_name): (TryReadFn, &str) = match type_id {
+        id if id == ID!(io_buffer_u8) => (rb_io_buffer_try_read_U8, "U8"),
+        id if id == ID!(io_buffer_s8) => (rb_io_buffer_try_read_S8, "S8"),
+        id if id == ID!(io_buffer_u16_be) => (rb_io_buffer_try_read_U16, "U16"),
+        id if id == ID!(io_buffer_u16_le) => (rb_io_buffer_try_read_u16, "u16"),
+        id if id == ID!(io_buffer_s16_be) => (rb_io_buffer_try_read_S16, "S16"),
+        id if id == ID!(io_buffer_s16_le) => (rb_io_buffer_try_read_s16, "s16"),
+        id if id == ID!(io_buffer_u32_be) => (rb_io_buffer_try_read_U32, "U32"),
+        id if id == ID!(io_buffer_u32_le) => (rb_io_buffer_try_read_u32, "u32"),
+        id if id == ID!(io_buffer_s32_be) => (rb_io_buffer_try_read_S32, "S32"),
+        id if id == ID!(io_buffer_s32_le) => (rb_io_buffer_try_read_s32, "s32"),
+        _ => return false,
+    };
+
+    let comptime_offset = jit.peek_at_stack(&asm.ctx, 0);
+    if !comptime_offset.fixnum_p() {
+        return false;
+    }
+
+    asm_comment!(asm, "IO::Buffer#get_value(:{}, offset)", type_name);
+
+    // Don't pop since we may bail.
+    let recv = asm.stack_opnd(2);
+    let type_opnd = asm.stack_opnd(1);
+    let offset_opnd = asm.stack_opnd(0);
+
+    // Specialize this callsite for the sampled type.
+    asm.cmp(type_opnd, comptime_type.into());
+    jit_chain_guard(
+        JCC_JNE,
+        jit,
+        asm,
+        SEND_MAX_DEPTH,
+        Counter::io_buffer_get_value_type_mismatch,
+    );
+
+    // Offset should be a Fixnum.
+    jit_guard_known_klass(
+        jit,
+        asm,
+        offset_opnd,
+        offset_opnd.into(),
+        comptime_offset,
+        SEND_MAX_DEPTH,
+        Counter::io_buffer_get_value_offset_not_fixnum,
+    );
+
+    // Reject negative offsets before passing the offset as usize.
+    let offset = asm.rshift(offset_opnd, Opnd::UImm(1));
+    asm.cmp(offset, Opnd::UImm(0));
+    asm.jl(Target::side_exit(Counter::io_buffer_get_value_negative_offset));
+
+    // Call the try_read function, which deliberately doesn't raise and
+    // returns Qundef on invalid access.
+    let value = asm.ccall(try_read_fn as *const u8, vec![recv, offset]);
+
+    // Side-exit to preserve its exception class, message, and backtrace on invalid access.
+    asm.cmp(value, Qundef.into());
+    asm.je(Target::side_exit(Counter::io_buffer_get_value_invalid_access));
+
+    asm.stack_pop(3);
+
+    // The result of try_read_fn always fits in a Fixnum on YJIT-enabled platforms.
+    let out_opnd = asm.stack_push(Type::Fixnum);
+    asm.mov(out_opnd, value);
+
+    true
+}
+
 fn jit_rb_str_setbyte(
     jit: &mut JITState,
     asm: &mut Assembler,
@@ -11123,6 +11218,8 @@ pub fn yjit_reg_method_codegen_fns() {
         reg_method_codegen(rb_cClass, "superclass", jit_rb_class_superclass);
 
         reg_method_codegen(rb_singleton_class(rb_cThread), "current", jit_thread_s_current);
+
+        reg_method_codegen(rb_cIOBuffer, "get_value", jit_rb_io_buffer_get_value);
     }
 }
 

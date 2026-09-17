@@ -1243,6 +1243,17 @@ extern "C" {
     pub fn rb_float_mul(x: VALUE, y: VALUE) -> VALUE;
     pub fn rb_float_div(x: VALUE, y: VALUE) -> VALUE;
     pub fn rb_fix_aref(fix: VALUE, idx: VALUE) -> VALUE;
+    pub static mut rb_cIOBuffer: VALUE;
+    pub fn rb_io_buffer_try_read_U8(buffer: VALUE, offset: usize) -> VALUE;
+    pub fn rb_io_buffer_try_read_S8(buffer: VALUE, offset: usize) -> VALUE;
+    pub fn rb_io_buffer_try_read_U16(buffer: VALUE, offset: usize) -> VALUE;
+    pub fn rb_io_buffer_try_read_u16(buffer: VALUE, offset: usize) -> VALUE;
+    pub fn rb_io_buffer_try_read_S16(buffer: VALUE, offset: usize) -> VALUE;
+    pub fn rb_io_buffer_try_read_s16(buffer: VALUE, offset: usize) -> VALUE;
+    pub fn rb_io_buffer_try_read_U32(buffer: VALUE, offset: usize) -> VALUE;
+    pub fn rb_io_buffer_try_read_u32(buffer: VALUE, offset: usize) -> VALUE;
+    pub fn rb_io_buffer_try_read_S32(buffer: VALUE, offset: usize) -> VALUE;
+    pub fn rb_io_buffer_try_read_s32(buffer: VALUE, offset: usize) -> VALUE;
     pub fn rb_vm_insn_addr2opcode(addr: *const ::std::os::raw::c_void) -> ::std::os::raw::c_int;
     pub fn rb_iseq_line_no(iseq: *const rb_iseq_t, pos: usize) -> ::std::os::raw::c_uint;
     pub fn rb_iseqw_to_iseq(iseqw: VALUE) -> *const rb_iseq_t;

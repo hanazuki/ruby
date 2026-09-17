@@ -16,6 +16,7 @@
 #include "internal/fixnum.h"
 #include "internal/numeric.h"
 #include "internal/gc.h"
+#include "internal/io_buffer.h"
 #include "vm_core.h"
 #include "vm_callinfo.h"
 #include "builtin.h"
@@ -28,6 +29,7 @@
 #include "probes_helper.h"
 #include "iseq.h"
 #include "ruby/debug.h"
+#include "ruby/io/buffer.h"
 #include "internal/cont.h"
 #include "internal/jit.h"
 

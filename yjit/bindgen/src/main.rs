@@ -134,6 +134,7 @@ fn main() {
         .allowlist_var("rb_cFalseClass")
         .allowlist_var("rb_cInteger")
         .allowlist_var("rb_cIO")
+        .allowlist_var("rb_cIOBuffer")
         .allowlist_var("rb_cSymbol")
         .allowlist_var("rb_cFloat")
         .allowlist_var("rb_cNumeric")
@@ -183,6 +184,9 @@ fn main() {
         .allowlist_function("rb_reg_match_last")
         .allowlist_function("rb_reg_nth_match")
         .allowlist_function("rb_reg_new_from_values")
+
+        .allowlist_function("rb_io_buffer_try_read_(U|S)(8|16|32)")
+        .allowlist_function("rb_io_buffer_try_read_(u|s)(16|32)")
 
         // `ruby_value_type` is a C enum and this stops it from
         // prefixing all the members with the name of the type

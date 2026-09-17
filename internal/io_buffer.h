@@ -34,3 +34,23 @@ VALUE rb_io_buffer_for_reading(VALUE string_or_buffer, VALUE (*callback)(VALUE b
 VALUE rb_io_buffer_for_writing(VALUE string_or_buffer, VALUE (*callback)(VALUE buffer, VALUE argument), VALUE argument);
 
 RUBY_SYMBOL_EXPORT_END
+
+#if USE_YJIT
+/**
+ * Read a Fixnum value of the specified signedness and width from the buffer.
+ *
+ * The caller must ensure that buffer is an instance of IO::Buffer.
+ * Given that precondition, these functions do not raise: they return Qundef
+ * when the buffer is invalid or the requested value is out of bounds.
+ */
+VALUE rb_io_buffer_try_read_U8(VALUE buffer, size_t offset);
+VALUE rb_io_buffer_try_read_S8(VALUE buffer, size_t offset);
+VALUE rb_io_buffer_try_read_U16(VALUE buffer, size_t offset);
+VALUE rb_io_buffer_try_read_u16(VALUE buffer, size_t offset);
+VALUE rb_io_buffer_try_read_S16(VALUE buffer, size_t offset);
+VALUE rb_io_buffer_try_read_s16(VALUE buffer, size_t offset);
+VALUE rb_io_buffer_try_read_U32(VALUE buffer, size_t offset);
+VALUE rb_io_buffer_try_read_u32(VALUE buffer, size_t offset);
+VALUE rb_io_buffer_try_read_S32(VALUE buffer, size_t offset);
+VALUE rb_io_buffer_try_read_s32(VALUE buffer, size_t offset);
+#endif

@@ -2062,6 +2062,101 @@ assert_equal 'abab', %q{
   jittable_method
 }
 
+# Test IO::Buffer#get_value specialization. Each type needs a distinct callsite.
+assert_equal '[84, -2, 21608, 26708, -2, -3, 1416127776, 543516756, -2, -3]', %q{
+  Warning[:experimental] = false
+  bytes = "\x54\xfe\x54\x68\x54\x68\xff\xfe\xfd\xff\x54\x68\x65\x20\x54\x68\x65\x20\xff\xff\xff\xfe\xfd\xff\xff\xff".b
+  buffer = IO::Buffer.for(bytes)
+
+  def io_buffer_get_U8(buffer) = buffer.get_value(:U8, 0)
+  def io_buffer_get_S8(buffer) = buffer.get_value(:S8, 1)
+  def io_buffer_get_U16(buffer) = buffer.get_value(:U16, 2)
+  def io_buffer_get_u16(buffer) = buffer.get_value(:u16, 4)
+  def io_buffer_get_S16(buffer) = buffer.get_value(:S16, 6)
+  def io_buffer_get_s16(buffer) = buffer.get_value(:s16, 8)
+  def io_buffer_get_U32(buffer) = buffer.get_value(:U32, 10)
+  def io_buffer_get_u32(buffer) = buffer.get_value(:u32, 14)
+  def io_buffer_get_S32(buffer) = buffer.get_value(:S32, 18)
+  def io_buffer_get_s32(buffer) = buffer.get_value(:s32, 22)
+
+  [
+    io_buffer_get_U8(buffer),
+    io_buffer_get_S8(buffer),
+    io_buffer_get_U16(buffer),
+    io_buffer_get_u16(buffer),
+    io_buffer_get_S16(buffer),
+    io_buffer_get_s16(buffer),
+    io_buffer_get_U32(buffer),
+    io_buffer_get_u32(buffer),
+    io_buffer_get_S32(buffer),
+    io_buffer_get_s32(buffer),
+  ]
+}
+
+# Test IO::Buffer#get_value with multiple types at a single callsite.
+assert_equal '[84, -2, 21608, 26708, -2, -3, 1416127776, 543516756, -2, -3, 6124425350339952638]', %q{
+  Warning[:experimental] = false
+  bytes = "\x54\xfe\x54\x68\x54\x68\xff\xfe\xfd\xff\x54\x68\x65\x20\x54\x68\x65\x20\xff\xff\xff\xfe\xfd\xff\xff\xff".b
+  buffer = IO::Buffer.for(bytes)
+
+  def io_buffer_get_value(buffer, type, offset) = buffer.get_value(type, offset)
+
+  [
+    io_buffer_get_value(buffer, :U8, 0),
+    io_buffer_get_value(buffer, :S8, 1),
+    io_buffer_get_value(buffer, :U16, 2),
+    io_buffer_get_value(buffer, :u16, 4),
+    io_buffer_get_value(buffer, :S16, 6),
+    io_buffer_get_value(buffer, :s16, 8),
+    io_buffer_get_value(buffer, :U32, 10),
+    io_buffer_get_value(buffer, :u32, 14),
+    io_buffer_get_value(buffer, :S32, 18),
+    io_buffer_get_value(buffer, :s32, 22),
+    io_buffer_get_value(buffer, :U64, 0),
+  ]
+}
+
+# Test IO::Buffer#get_value invalid access fallback paths.
+assert_equal '[ArgumentError, ArgumentError, TypeError, IO::Buffer::InvalidatedError]', %q{
+  Warning[:experimental] = false
+  buffer = IO::Buffer.for("The quick brown fox")
+
+  def io_buffer_get_U32_at(buffer, offset) = buffer.get_value(:U32, offset)
+
+  io_buffer_get_U32_at(buffer, 0)
+
+  out_of_bounds = begin
+    io_buffer_get_U32_at(buffer, 100)
+  rescue => error
+    error.class
+  end
+
+  negative_offset = begin
+    io_buffer_get_U32_at(buffer, -1)
+  rescue => error
+    error.class
+  end
+
+  bad_offset = begin
+    io_buffer_get_U32_at(buffer, nil)
+  rescue => error
+    error.class
+  end
+
+  root = IO::Buffer.for("abcd")
+  slice = root.slice(0, 4)
+  io_buffer_get_U32_at(slice, 0)
+  root.free
+
+  invalid_slice = begin
+    io_buffer_get_U32_at(slice, 0)
+  rescue => error
+    error.class
+  end
+
+  [out_of_bounds, negative_offset, bad_offset, invalid_slice]
+}
+
 # test invokebuiltin as used in struct assignment
 assert_equal '123', %q{
   def foo(obj)
